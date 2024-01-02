@@ -1,27 +1,47 @@
 #!/bin/bash
 
-resources=3
-processes=5
-index_max=0
-index_alloc=0
+function initialize_variables {
+    resources=3
+    processes=5
+    index_max=0
+    index_alloc=0
+    format="%-12s"
+    format_max="%-9s"
+    format_allocation="%-14s"
+    format_need="%-9s"
+}
 
-allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
-max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
-available=(3 3 2)
+function initialize_arrays {
+    allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
+    max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
+    available=(3 3 2)
+    for element in "${available[@]}"; do
+	initial_available+=("$element")
+    done
+    for ((i=0; i<processes; i++)); do
+	finish[$i]=0
+	answer[$i]=0
+    done
+    for ((i=0; i<resources; i++)); do
+	for ((j=0; j<processes; j++)); do
+            alloc_array[$((i * processes + j))]=${allocation_values[$index_alloc]}
+            ((index_alloc++))
+	done
+    done
+    for ((i=0; i<resources; i++)); do
+	for ((j=0; j<processes; j++)); do
+            max_array[$((i * processes + j))]=${max_values[$index_max]}
+            ((index_max++))
+	done
+    done
+    
+    for ((i=0; i<resources; i++)); do
+	for ((j=0; j<processes; j++)); do
+	    need_array[$((i * processes + j))]=$((max_array[$((i * processes + j))] - alloc_array[$((i * processes + j))]))
+	done
+    done
+}
 
-for element in "${available[@]}"; do
-    initial_available+=("$element")
-done
-
-for ((i=0; i<processes; i++)); do
-    finish[$i]=0
-    answer[$i]=0
-done
-
-format="%-12s"
-format_max="%-9s"
-format_allocation="%-14s"
-format_need="%-9s"
 
 print_header() {
     echo
@@ -36,129 +56,134 @@ print_header() {
     printf "%9s\n" "A B C"
 }
 
-for ((i=0; i<resources; i++)); do
-    for ((j=0; j<processes; j++)); do
-        alloc_array[$((i * processes + j))]=${allocation_values[$index_alloc]}
-        ((index_alloc++))
-    done
-done
-for ((i=0; i<resources; i++)); do
-    for ((j=0; j<processes; j++)); do
-        max_array[$((i * processes + j))]=${max_values[$index_max]}
-        ((index_max++))
-    done
-done
-
-for ((i=0; i<resources; i++)); do
-    for ((j=0; j<processes; j++)); do
-	need_array[$((i * processes + j))]=$((max_array[$((i * processes + j))] - alloc_array[$((i * processes + j))]))
-    done
-done
-
-available_printed=true
-print_header
-for ((i=0; i<processes; i++));do
-    formatted_line=""
-    for ((j=0; j<resources; j++)); do
-	formatted_line+="${alloc_array[$((i * resources + j))]} "
-    done
-    printf "$format" "P$i"
-    printf "$format_allocation" "$formatted_line"
-    formatted_line=""
-    for ((k=0; k<resources; k++)); do
-	formatted_line+="${max_array[$((i * resources + k))]} "
-    done
-    printf "$format_max" "$formatted_line"
-    formatted_line=""
-    for ((l=0; l<resources; l++)); do
-	formatted_line+="${need_array[$((i * resources + l))]} "
-    done
-    printf "$format_need" "$formatted_line"
-    formatted_line=""
-    if [ "$available_printed" = true ]; then
-	for ((m=0; m<resources; m++)); do
-	    formatted_line+="${available[$m]} "
-	    available_printed=false
-	done
-	printf "$formatted_line"
-    fi
-    echo
-done
-
-index=0
-flag=0
-
-for ((i=0; i<processes; i++)); do
-    for ((m=0; m<processes; m++)); do
-	if [ ${finish[$m]} -eq 0 ]; then
-	    flag=0
-	    for ((n=0; n<resources; n++)); do
-		if [ ${need_array[$((m * resources + n))]} -gt ${available[$n]} ]; then
-		    flag=1
-		    break
-		fi
-	    done
-	    if [ $flag -eq 0 ]; then
-       		answer[$index]=$m
-		((index++))
-		for ((y=0; y<resources; y++)); do
-		    available[$y]=$((${available[$y]} + ${alloc_array[$((m * resources + y))]}))
-		done
-		finish[$m]=1
-	    fi
-	fi
-    done
-done
-
-
-flag=1
-echo
-for ((n=0; n<processes; n++)); do
-    if [ ${finish[$n]} -eq 0 ]; then
-	flag=0
-	echo "The given sequence is not safe."
-	break;
-    fi
-done
-
-if [ $flag -eq 1 ]; then
-    echo "The following sequence is a safe sequence:"
-    for ((m=0; m<$((processes-1)); m++)); do
-	echo -n "P${answer[$m]} -> "
-    done
-    echo -n "P${answer[$((processes - 1))]}"
-    echo
-fi
-
-request_flag=0
-if [ $flag -eq 1 ]; then
-    process_num=1
-    request=(1 0 2)
-    for ((i=0; i<resources; i++)); do
-	if [ ${request[$i]} -gt ${need_array[$(($process_num * resources + i))]} ]; then
-	    request_flag=1
-	    break
-	fi
-    done
-    if [ $request_flag -eq 0 ]; then
+print_table() {
+    available_printed=true
+    print_header
+    for ((i=0; i<processes; i++));do
+	formatted_line=""
 	for ((j=0; j<resources; j++)); do
-	    if [ ${request[$j]} -gt ${initial_available[$j]} ]; then
+	    formatted_line+="${alloc_array[$((i * resources + j))]} "
+	done
+	printf "$format" "P$i"
+	printf "$format_allocation" "$formatted_line"
+	formatted_line=""
+	for ((k=0; k<resources; k++)); do
+	    formatted_line+="${max_array[$((i * resources + k))]} "
+	done
+	printf "$format_max" "$formatted_line"
+	formatted_line=""
+	for ((l=0; l<resources; l++)); do
+	    formatted_line+="${need_array[$((i * resources + l))]} "
+	done
+	printf "$format_need" "$formatted_line"
+	formatted_line=""
+	if [ "$available_printed" = true ]; then
+	    for ((m=0; m<resources; m++)); do
+		formatted_line+="${available[$m]} "
+		available_printed=false
+	    done
+	    printf "$formatted_line"
+	fi
+	echo
+    done
+}
+
+check_if_sequence_safe() {
+    index=0
+    flag=0
+
+    for ((i=0; i<processes; i++)); do
+	for ((m=0; m<processes; m++)); do
+	    if [ ${finish[$m]} -eq 0 ]; then
+		flag=0
+		for ((n=0; n<resources; n++)); do
+		    if [ ${need_array[$((m * resources + n))]} -gt ${available[$n]} ]; then
+			flag=1
+			break
+		    fi
+		done
+		if [ $flag -eq 0 ]; then
+       		    answer[$index]=$m
+		    ((index++))
+		    for ((y=0; y<resources; y++)); do
+			available[$y]=$((${available[$y]} + ${alloc_array[$((m * resources + y))]}))
+		    done
+		    finish[$m]=1
+		fi
+	    fi
+	done
+    done
+}
+
+display_if_safe() {
+    flag=1
+    echo
+    for ((n=0; n<processes; n++)); do
+	if [ ${finish[$n]} -eq 0 ]; then
+	    flag=0
+	    echo "The given sequence is not safe."
+	    break;
+	fi
+    done
+
+    if [ $flag -eq 1 ]; then
+	echo "The following sequence is a safe sequence:"
+	for ((m=0; m<$((processes-1)); m++)); do
+	    echo -n "P${answer[$m]} -> "
+	done
+	echo -n "P${answer[$((processes - 1))]}"
+    fi
+}
+
+check_new_request() {
+
+    request_flag=0
+    if [ $flag -eq 1 ]; then
+	process_num=1
+	request=(1 0 2)
+	for ((i=0; i<resources; i++)); do
+	    if [ ${request[$i]} -gt ${need_array[$(($process_num * resources + i))]} ]; then
 		request_flag=1
 		break
 	    fi
 	done
-	echo
+	if [ $request_flag -eq 0 ]; then
+	    for ((j=0; j<resources; j++)); do
+		if [ ${request[$j]} -gt ${initial_available[$j]} ]; then
+		    request_flag=1
+		    break
+		fi
+	    done
+	    echo
+	fi
+
+	if [ $request_flag -eq 0 ]; then
+            for ((k=0; k<resources; k++)); do
+		initial_available[$k]=$((${initial_available[$k]} - ${request[$k]}))
+		alloc_array[$(($process_num * resources + k))]=$((${alloc_array[$(($process_num * resources + k))]} + ${request[$k]}))
+		need_array[$(($process_num * resources + k))]=$((${need_array[$(($process_num * resources + k))]} - ${request[$k]}))
+	    done
+	else
+	    echo "Request can not be granted"
+	fi
     fi
 
-    if [ $request_flag -eq 0 ]; then
-        for ((k=0; k<resources; k++)); do
-	    initial_available[$k]=$((${initial_available[$k]} - ${request[$k]}))
-	    alloc_array[$(($process_num * resources + k))]=$((${alloc_array[$(($process_num * resources + k))]} + ${request[$k]}))
-	    need_array[$(($process_num * resources + k))]=$((${need_array[$(($process_num * resources + k))]} - ${request[$k]}))
-	done
-    else
-	echo "Request can not be granted"
-    fi
-fi
-	 
-	 
+}
+
+initialize_variables
+initialize_arrays
+print_table
+check_if_sequence_safe
+display_if_safe
+check_new_request
+
+
+
+
+
+
+
+
+
+
+
