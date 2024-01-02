@@ -9,6 +9,10 @@ allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
 max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
 available=(3 3 2)
 
+for element in "${available[@]}"; do
+    initial_available+=("$element")
+done
+
 for ((i=0; i<processes; i++)); do
     finish[$i]=0
     answer[$i]=0
@@ -120,10 +124,41 @@ done
 if [ $flag -eq 1 ]; then
     echo "The following sequence is a safe sequence:"
     for ((m=0; m<$((processes-1)); m++)); do
-	echo -n " P${answer[$m]} ->"
+	echo -n "P${answer[$m]} -> "
     done
-    echo -n " P${answer[$((processes - 1))]}"
+    echo -n "P${answer[$((processes - 1))]}"
     echo
+fi
+
+request_flag=0
+if [ $flag -eq 1 ]; then
+    process_num=1
+    request=(1 0 2)
+    for ((i=0; i<resources; i++)); do
+	if [ ${request[$i]} -gt ${need_array[$(($process_num * resources + i))]} ]; then
+	    request_flag=1
+	    break
+	fi
+    done
+    if [ $request_flag -eq 0 ]; then
+	for ((j=0; j<resources; j++)); do
+	    if [ ${request[$j]} -gt ${initial_available[$j]} ]; then
+		request_flag=1
+		break
+	    fi
+	done
+	echo
+    fi
+
+    if [ $request_flag -eq 0 ]; then
+        for ((k=0; k<resources; k++)); do
+	    initial_available[$k]=$((${initial_available[$k]} - ${request[$k]}))
+	    alloc_array[$(($process_num * resources + k))]=$((${alloc_array[$(($process_num * resources + k))]} + ${request[$k]}))
+	    need_array[$(($process_num * resources + k))]=$((${need_array[$(($process_num * resources + k))]} - ${request[$k]}))
+	done
+    else
+	echo "Request can not be granted"
+    fi
 fi
 	 
 	 
