@@ -98,9 +98,7 @@ for ((i=0; i<processes; i++)); do
        		answer[$index]=$m
 		((index++))
 		for ((y=0; y<resources; y++)); do
-		    echo "Before Available: ${available[$y]}"
 		    available[$y]=$((${available[$y]} + ${alloc_array[$((m * resources + y))]}))
-		    echo "After Available: ${available[$y]}"
 		done
 		finish[$m]=1
 	    fi
