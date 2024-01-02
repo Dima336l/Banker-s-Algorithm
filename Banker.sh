@@ -11,16 +11,22 @@ function initialize_variables {
     format_need="%-9s"
 }
 
-function initialize_arrays {
-    allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
-    max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
-    available=(3 3 2)
-    for element in "${available[@]}"; do
-	initial_available+=("$element")
-    done
+initialize_finish_arrays() {
     for ((i=0; i<processes; i++)); do
 	finish[$i]=0
 	answer[$i]=0
+    done
+}
+
+function initialize_arrays {
+    read -a allocation_values -p "Enter the number of available resources (separated by space): "
+    #allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
+    read -a max_values -p "Enter the maximum demand of each process (separated by space): "
+    #max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
+    read -a available -p "Enter available resources (separated by space): "
+    #available=(3 3 2)
+    for element in "${available[@]}"; do
+	initial_available+=("$element")
     done
     for ((i=0; i<resources; i++)); do
 	for ((j=0; j<processes; j++)); do
@@ -40,6 +46,7 @@ function initialize_arrays {
 	    need_array[$((i * processes + j))]=$((max_array[$((i * processes + j))] - alloc_array[$((i * processes + j))]))
 	done
     done
+    initialize_finish_arrays
 }
 
 
@@ -136,7 +143,8 @@ display_if_safe() {
 }
 
 check_new_request() {
-
+    initialize_finish_arrays
+    available=(3 3 2)
     request_flag=0
     if [ $flag -eq 1 ]; then
 	process_num=1
@@ -149,7 +157,7 @@ check_new_request() {
 	done
 	if [ $request_flag -eq 0 ]; then
 	    for ((j=0; j<resources; j++)); do
-		if [ ${request[$j]} -gt ${initial_available[$j]} ]; then
+		if [ ${request[$j]} -gt ${available[$j]} ]; then
 		    request_flag=1
 		    break
 		fi
@@ -159,7 +167,7 @@ check_new_request() {
 
 	if [ $request_flag -eq 0 ]; then
             for ((k=0; k<resources; k++)); do
-		initial_available[$k]=$((${initial_available[$k]} - ${request[$k]}))
+		available[$k]=$((${available[$k]} - ${request[$k]}))
 		alloc_array[$(($process_num * resources + k))]=$((${alloc_array[$(($process_num * resources + k))]} + ${request[$k]}))
 		need_array[$(($process_num * resources + k))]=$((${need_array[$(($process_num * resources + k))]} - ${request[$k]}))
 	    done
@@ -176,8 +184,9 @@ print_table
 check_if_sequence_safe
 display_if_safe
 check_new_request
-
-
+print_table
+check_if_sequence_safe
+display_if_safe
 
 
 
