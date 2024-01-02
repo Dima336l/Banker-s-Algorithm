@@ -1,9 +1,0 @@
-#!/bin/bash
-
-declare -a myArray
-
-rows=3
-columns=5
-
-echo "Rows: $rows"
-echo "Columns: $columns"
