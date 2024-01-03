@@ -20,11 +20,8 @@ initialize_finish_arrays() {
 
 function initialize_arrays {
     read -a allocation_values -p "Enter the number of available resources (separated by space): "
-    #allocation_values=(0 1 0 2 0 0 3 0 2 2 1 1 0 0 2)
     read -a max_values -p "Enter the maximum demand of each process (separated by space): "
-    #max_values=(7 5 3 3 2 2 9 0 2 2 2 2 4 3 3)
     read -a available -p "Enter available resources (separated by space): "
-    #available=(3 3 2)
     for element in "${available[@]}"; do
 	initial_available+=("$element")
     done
