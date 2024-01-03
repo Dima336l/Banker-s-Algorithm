@@ -9,6 +9,7 @@ function initialize_variables {
     format_max="%-9s"
     format_allocation="%-14s"
     format_need="%-9s"
+    request_flag=0
 }
 
 initialize_finish_arrays() {
@@ -61,6 +62,7 @@ print_header() {
 }
 
 print_table() {
+    if [ $request_flag -eq 0 ]; then
     available_printed=true
     print_header
     for ((i=0; i<processes; i++));do
@@ -90,12 +92,12 @@ print_table() {
 	fi
 	echo
     done
+    fi
 }
 
 check_if_sequence_safe() {
     index=0
     flag=0
-
     for ((i=0; i<processes; i++)); do
 	for ((m=0; m<processes; m++)); do
 	    if [ ${finish[$m]} -eq 0 ]; then
@@ -117,6 +119,7 @@ check_if_sequence_safe() {
 	    fi
 	done
     done
+    ((iter++))
 }
 
 display_if_safe() {
@@ -130,22 +133,24 @@ display_if_safe() {
 	fi
     done
 
+    if [ $request_flag -eq 0 ]; then 
     if [ $flag -eq 1 ]; then
 	echo "The following sequence is a safe sequence:"
 	for ((m=0; m<$((processes-1)); m++)); do
 	    echo -n "P${answer[$m]} -> "
 	done
 	echo -n "P${answer[$((processes - 1))]}"
+	echo
+    fi
     fi
 }
 
-check_new_request() {
-    initialize_finish_arrays
-    available=(3 3 2)
-    request_flag=0
+check_new_request() {    
+    available=("${initial_available[@]}")
     if [ $flag -eq 1 ]; then
-	process_num=1
-	request=(1 0 2)
+      	echo
+	read -a process_num -p "Enter the process number which requests resources: "
+	read -a request -p "Enter the requested resources (separated by space): " 
 	for ((i=0; i<resources; i++)); do
 	    if [ ${request[$i]} -gt ${need_array[$(($process_num * resources + i))]} ]; then
 		request_flag=1
@@ -163,12 +168,13 @@ check_new_request() {
 	fi
 
 	if [ $request_flag -eq 0 ]; then
-            for ((k=0; k<resources; k++)); do
+            for ((k=0; k<resources; k++)); do 
 		available[$k]=$((${available[$k]} - ${request[$k]}))
 		alloc_array[$(($process_num * resources + k))]=$((${alloc_array[$(($process_num * resources + k))]} + ${request[$k]}))
 		need_array[$(($process_num * resources + k))]=$((${need_array[$(($process_num * resources + k))]} - ${request[$k]}))
 	    done
 	else
+	    echo
 	    echo "Request can not be granted"
 	fi
     fi
@@ -184,12 +190,3 @@ check_new_request
 print_table
 check_if_sequence_safe
 display_if_safe
-
-
-
-
-
-
-
-
-
